@@ -45,4 +45,4 @@ export const getRecipeSummary = async (recipeId: string) => {
   } catch (error) {
     console.log(error);
   }
-}
+};
