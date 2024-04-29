@@ -1,7 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import * as RecipeAPI from './recipe-api';
+import { PrismaClient } from '@prisma/client';
 const app = express();
+const prismaClient = new PrismaClient();
 
 app.use(express.json());
 app.use(cors());
@@ -20,6 +22,59 @@ app.get('/api/recipes/:recipeId/summary', async (req, res) => {
 
   return res.json(results);
 });
+
+app.post('/api/recipes/favourite', async (req, res) => {
+  //const recipeId = req.body.recipeId;
+  const recipeIdStr = req.body.recipeId;
+  const recipeId = parseInt(recipeIdStr, 10);
+
+  if (isNaN(recipeId)) {
+    return res.status(400).json({ message: 'Invalid recipeId' });
+  }
+
+  try {
+    const favouriteRecipe = await prismaClient.favouriteRecipes.create({
+      data: {
+        recipeId: recipeId,
+      }
+    });
+
+    return res.status(201).json(favouriteRecipe);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: 'Something went wrong' });
+  }
+});
+
+app.get('/api/recipes/favourite', async (req, res) => {
+  try {
+    const recipes = await prismaClient.favouriteRecipes.findMany();
+    const recipeIds = recipes.map((recipe) => recipe.recipeId.toString());
+
+    const favourites = await RecipeAPI.getFavouriteRecipesByIds(recipeIds);
+
+    return res.json(favourites);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: 'Something went wrong' });
+  }
+});
+
+app.delete('/api/recipes/favourite', async (req, res) => {
+  const recipeId = req.body.recipeId;
+
+  try {
+    await prismaClient.favouriteRecipes.delete({
+      where: {
+        recipeId: recipeId,
+      }
+    });
+    return res.status(204).send();
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: 'Something went wrong' });
+  }
+})
 
 app.listen(5000, () => {
   console.log('Server listening on port 5000');
